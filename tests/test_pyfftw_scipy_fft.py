@@ -38,8 +38,8 @@ try:
 except ImportError:
     scipy_version = '0.0.0'
 
-from distutils.version import LooseVersion
-has_scipy_fft = LooseVersion(scipy_version) >= '1.4.0'
+from packaging.version import Version
+has_scipy_fft = Version(scipy_version) >= Version('1.4.0')
 
 if has_scipy_fft:
     import scipy.fft
@@ -128,7 +128,7 @@ atol_dict = dict(f=1e-5, d=1e-7, g=1e-7)
 rtol_dict = dict(f=1e-4, d=1e-5, g=1e-5)
 transform_types = [1, 2, 3, 4]
 
-if LooseVersion(scipy_version) >= '1.6.0':
+if Version(scipy_version) >= Version('1.6.0'):
     # all norm options aside from None
     scipy_norms = [None, 'ortho', 'forward', 'backward']
 else:
@@ -191,8 +191,13 @@ class InterfacesScipyR2RFFTTest(unittest.TestCase):
                 data_hat_s = self.scipy_func(self.data, type=transform_type,
                                              norm=norm,
                                              overwrite_x=False, **self.kwargs)
-                self.assertTrue(numpy.allclose(data_hat_p, data_hat_s,
-                                               atol=self.atol, rtol=self.rtol))
+
+                if not numpy.allclose(data_hat_p, data_hat_s, atol=self.atol, rtol=self.rtol):
+                    info = f"{self.func_name=}, {norm=}, {transform_type=}"
+                    print(info)
+                    print("scipy: ", data_hat_s)
+                    print("ratio:  ", data_hat_p / data_hat_s)
+                    raise ValueError(info)
 
     def test_normalization_inverses(self):
         '''Test normalization in all of the pyfftw scipy wrappers.
@@ -205,8 +210,11 @@ class InterfacesScipyR2RFFTTest(unittest.TestCase):
             result = self.pyfftw_func(forward, type=inverse_type,
                                       norm='ortho',
                                       overwrite_x=False, **self.kwargs)
-            self.assertTrue(numpy.allclose(self.data, result,
-                                           atol=self.atol, rtol=self.rtol))
+            if not numpy.allclose(self.data, result, atol=self.atol, rtol=self.rtol):
+                info = f"{self.func_name=}, norm='ortho', {transform_type=}"
+                print(info)
+                print("ratio: ", result / self.data)
+                raise ValueError(info)
 
 
 @unittest.skipIf(not has_scipy_fft, 'scipy.fft is unavailable')
